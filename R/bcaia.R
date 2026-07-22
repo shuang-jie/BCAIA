@@ -245,9 +245,9 @@ bcaia <- function(Y, Xmean, Xcov,
     RSS <- RSS - alphaij
 
     RSS <- RSS + tcrossprod(Xmean, betajp)
+    Ip <- diag(Pmean)
     for (ji in seq_len(J)) {
-      U.l <- chol(diag(rep(1 / cc$u2_beta, Pmean)) + crossprod(Xmean) / sig2 +
-                    diag(rep(1e-10, Pmean)))
+      U.l <- chol(Ip / cc$u2_beta + crossprod(Xmean) / sig2 + Ip * 1e-10)
       a.l <- crossprod(Xmean, RSS[, ji]) / sig2
       betajp[ji, ] <- backsolve(U.l, backsolve(U.l, a.l, transpose = TRUE) +
                                   stats::rnorm(Pmean))
