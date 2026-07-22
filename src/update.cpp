@@ -51,8 +51,10 @@ arma::vec dmvnrm_arma_mc(arma::mat const &x,
     constants = -(double)xdim/2.0 * log2pi,
     other_terms = rootisum + constants;
 
+  // NB: no OpenMP here. In the hot path this function is called on a single
+  // row at a time, so parallelising over rows gives no benefit and, on
+  // many-core machines, spawning threads per call is catastrophically slow.
   arma::rowvec z;
-#pragma omp parallel for schedule(static) private(z)
   for (uword i = 0; i < n; i++) {
     z = (x.row(i) - mean);
     inplace_tri_mat_mult(z, rooti);
