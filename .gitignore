@@ -1,0 +1,17 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Compiled objects
+src/*.o
+src/*.so
+src/*.dll
+
+# pkgdown site
+docs/
+
+# macOS
+.DS_Store

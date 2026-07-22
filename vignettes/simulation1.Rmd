@@ -1,0 +1,78 @@
+---
+title: "Simulation 1: covariate-varying interactions with a categorical design"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulation 1: covariate-varying interactions with a categorical design}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 4)
+```
+
+This vignette reproduces the design of **Simulation 1** (paper §4.1): a
+categorical design with a binary and a ternary covariate giving six
+experimental conditions, `J = 15` features and `N = 30` samples. The true
+covariance is rank-2 and varies with the covariates.
+
+```{r setup}
+library(BCAIA)
+set.seed(6)
+sim <- simulate_bcaia(n = 30, J = 15, K_true = 2, seed = 6)
+dim(sim$Y)
+round(mean(sim$Y == 0), 3)   # zero rate
+```
+
+## Choosing K
+
+`K` is set to a value large enough to capture the covariance; redundant factors
+are shrunk out by the Dirichlet–Horseshoe prior. A data-driven starting point is
+the clr-PCA scree rule:
+
+```{r choose-k}
+choose_K(sim$Y)
+```
+
+The paper uses `K = 5` here (a small over-specification is harmless).
+
+## Fitting the model
+
+For illustration we run a short chain. **The paper uses `niter = 160000`**;
+increase `niter` for real analyses (best run on a server).
+
+```{r fit, eval = FALSE}
+fit <- bcaia(sim$Y, sim$Xmean, sim$Xcov, K = 5,
+             niter = 160000, burnin = 80000, thin = 10, seed = 1)
+```
+
+```{r fit-short, echo = FALSE}
+fit <- bcaia(sim$Y, sim$Xmean, sim$Xcov, K = 5,
+             niter = 1500, burnin = 750, thin = 5, seed = 1, verbose = FALSE)
+fit
+```
+
+## Posterior covariance vs. truth
+
+We compare the posterior median covariance to the truth at two conditions.
+
+```{r sigma}
+x1  <- sim$Xcov[1, ]    # condition 1
+x26 <- sim$Xcov[26, ]   # condition 6
+S1  <- posterior_Sigma(fit, x1)
+S26 <- posterior_Sigma(fit, x26)
+
+ut <- upper.tri(S1, diag = TRUE)
+c(cond1 = cor(S1[ut],  sim$truth$Sigma[, , 1][ut]),
+  cond6 = cor(S26[ut], sim$truth$Sigma[, , 26][ut]))
+```
+
+```{r heatmap, fig.width = 7, fig.height = 3.5}
+op <- par(mfrow = c(1, 2), mar = c(2, 2, 2, 1))
+image(S1,  main = "Sigma-hat (condition 1)",  axes = FALSE)
+image(S26, main = "Sigma-hat (condition 6)",  axes = FALSE)
+par(op)
+```
+
+With the full `niter = 160000` chain, the posterior estimates closely match the
+true covariate-varying covariance across all six conditions (paper Fig. 1).

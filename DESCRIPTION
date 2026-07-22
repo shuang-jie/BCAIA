@@ -1,0 +1,46 @@
+Package: BCAIA
+Type: Package
+Title: Bayesian Covariate-Varying Interaction Analysis for Multivariate Count Data
+Version: 0.1.0
+Authors@R: c(
+    person("Shuangjie", "Zhang", email = "shuangjie.zhang@austin.utexas.edu",
+           role = c("aut", "cre")),
+    person("Michael L.", "Patnode", role = "aut"),
+    person("Juhee", "Lee", role = "aut"))
+Description: Implements the Bayesian covariate-varying factor model of Zhang,
+    Patnode and Lee for estimating how the mean abundance and the interaction
+    (covariance) structure among features vary with covariates in
+    high-dimensional multivariate count data, with a focus on microbiome
+    studies. The covariance is modelled through a sparse covariate-dependent
+    factor loading matrix with a Dirichlet-Horseshoe prior, and the discrete,
+    over-dispersed, zero-inflated counts are handled with a rounded
+    multivariate log-normal kernel and mean-constrained Dirichlet process
+    mixtures. Posterior inference is carried out by a blocked Gibbs / adaptive
+    Metropolis-Hastings sampler implemented in C++.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.1.0)
+Imports:
+    Rcpp,
+    GIGrvg,
+    extraDistr,
+    Rfast,
+    abind,
+    stats
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
+Suggests:
+    mvnfast,
+    LaplacesDemon,
+    ggplot2,
+    gplots,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+RoxygenNote: 7.3.2
+URL: https://github.com/shuang-jie/BCAIA
+BugReports: https://github.com/shuang-jie/BCAIA/issues
+Roxygen: list(load = "source")

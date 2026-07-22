@@ -1,0 +1,84 @@
+---
+title: "Mice gut microbiome data analysis"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Mice gut microbiome data analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 5)
+```
+
+This vignette reproduces the real-data analysis of paper §5. The data come from
+the gnotobiotic mouse experiment of Patnode et al. (2019): a 15-member human gut
+bacterial consortium under a HiSF diet supplemented with different fibres, with
+two categorical covariates — **diet** (HiSF / citrus pectin CPT / pea fibre PEF)
+and the **presence/absence of WH2** (*B. cellulosilyticus*, OTU 2).
+
+```{r setup}
+library(BCAIA)
+data(mice)
+dim(mice$Y)
+mice$species
+```
+
+`mice$Xmean` and `mice$Xcov` are the design matrices used in the paper
+(`Xcov` includes an intercept column).
+
+## Fitting the model
+
+The paper uses `K = 8` and `niter = 160000` (~22 min on an M1 Mac). Here we run
+a short chain for illustration.
+
+```{r fit, eval = FALSE}
+fit <- bcaia(mice$Y, mice$Xmean, mice$Xcov, K = 8,
+             niter = 160000, burnin = 80000, thin = 10, seed = 1)
+```
+
+```{r fit-short, echo = FALSE}
+fit <- bcaia(mice$Y, mice$Xmean, mice$Xcov, K = 8,
+             niter = 1500, burnin = 750, thin = 5, seed = 1, verbose = FALSE)
+fit
+```
+
+## Condition-specific interactions
+
+Each row of `Xcov` corresponds to a sample; the six experimental conditions are
+the unique rows. We estimate the posterior correlation matrix for each.
+
+```{r conditions}
+conds <- unique(mice$Xcov)
+rho_list <- lapply(seq_len(nrow(conds)), function(i) posterior_cor(fit, conds[i, ]))
+length(rho_list)
+```
+
+## Interaction between a pair of species across conditions
+
+For example, OTUs 9 and 13 (*Collinsella aerofaciens* and *Ruminococcaceae*),
+reported as negatively associated across all conditions in the paper:
+
+```{r pair}
+xlist <- setNames(lapply(seq_len(nrow(conds)), function(i) conds[i, ]),
+                  paste0("cond", seq_len(nrow(conds))))
+posterior_cor_pair(fit, j = 9, k = 13, xlist = xlist)
+```
+
+## Differential abundance
+
+Posterior draws of the mean-regression coefficients `beta` quantify how
+abundance shifts with diet and WH2 status (paper Fig. 5). For example, the
+posterior of the difference between two `Xmean` columns:
+
+```{r beta}
+beta <- fit$samples$beta          # J x Pmean x nsamp
+diff <- beta[, 1, ] - beta[, 2, ] # contrast of columns 1 and 2 of Xmean
+data.frame(OTU = mice$species,
+           median = round(apply(diff, 1, median), 2),
+           lower  = round(apply(diff, 1, quantile, 0.025), 2),
+           upper  = round(apply(diff, 1, quantile, 0.975), 2))
+```
+
+With the full chain these recover the significant diet and WH2 effects reported
+in the paper.

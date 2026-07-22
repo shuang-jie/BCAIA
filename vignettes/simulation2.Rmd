@@ -1,0 +1,82 @@
+---
+title: "Simulation 2: repeated samples and inter-subject variability"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulation 2: repeated samples and inter-subject variability}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 4)
+```
+
+This vignette illustrates the **subject-indexed** model (paper §4.2), used when
+there are repeated samples per subject and large inter-subject variability. The
+baseline abundance is subject-specific ($\alpha_{s,j}$), selected automatically
+by supplying a `subject` vector to `bcaia()`.
+
+The paper's Simulation 2 uses $S = 25$ subjects, $N = 50$ samples, $J = 100$
+OTUs, a continuous subject covariate and a binary sample covariate, with a
+baseline covariance plus a covariate-varying part. Here we use a smaller design
+so the vignette runs quickly.
+
+```{r data}
+library(BCAIA)
+set.seed(3)
+s <- 15; n <- 2 * s; J <- 40
+subject <- rep(seq_len(s), 2)
+xd <- rep(c(0, 1), each = s)     # binary sample covariate (condition)
+xc <- rep(rnorm(s), 2)           # continuous subject covariate
+Xcov  <- cbind(1, xd, xc)        # covariance design (with intercept)
+Xmean <- cbind(xd, xc)           # mean design (no intercept)
+
+## true covariate-varying covariance + subject baseline abundance
+Q <- matrix(0, J, 2); Q[sample(J, J / 2), ] <- rnorm(J)
+Fm <- matrix(rnorm(6), 2, 3)
+alpha_s <- matrix(rnorm(s * J, 3, 1), s, J)
+Y <- matrix(0, n, J)
+for (i in seq_len(n)) {
+  Lam <- Q * matrix(as.numeric(Fm %*% Xcov[i, ]), J, 2, byrow = TRUE)
+  Sig <- tcrossprod(Lam) + diag(0.25, J)
+  L <- chol(Sig + diag(1e-8, J))
+  Y[i, ] <- floor(exp(alpha_s[subject[i], ] + as.numeric(crossprod(L, rnorm(J)))))
+}
+round(mean(Y == 0), 3)  # zero rate
+```
+
+## Fitting the subject-indexed model
+
+Supplying `subject` switches on the $\alpha_{s,j}$ variant. **The paper uses
+`K = 7` and `niter = 160000`**; a short chain is shown here.
+
+```{r fit, eval = FALSE}
+fit <- bcaia(Y, Xmean, Xcov, subject = subject, K = 7,
+             niter = 160000, burnin = 80000, thin = 10, seed = 1)
+```
+
+```{r fit-short, echo = FALSE}
+fit <- bcaia(Y, Xmean, Xcov, subject = subject, K = 6,
+             niter = 1000, burnin = 500, thin = 5, seed = 1, verbose = FALSE)
+fit
+```
+
+## Covariate-varying covariance for a pair of features
+
+Because `Xcov` includes a continuous covariate, the covariance varies smoothly
+with it. We evaluate the posterior covariance between two features across a grid
+of the continuous covariate at each level of the binary covariate.
+
+```{r curve, fig.width = 6, fig.height = 4}
+grid <- seq(-2, 2, length.out = 25)
+pair <- c(1, 2)
+curve_xd <- function(d) sapply(grid, function(g)
+  posterior_Sigma(fit, c(1, d, g))[pair[1], pair[2]])
+plot(grid, curve_xd(0), type = "l", col = "red", ylim = range(curve_xd(0), curve_xd(1)),
+     xlab = "continuous covariate", ylab = expression(Sigma[jk](x)))
+lines(grid, curve_xd(1), col = "blue")
+legend("topright", c("xd = 0", "xd = 1"), col = c("red", "blue"), lty = 1, bty = "n")
+```
+
+With the full chain, the model recovers the baseline covariance, identifies
+inactive features, and tracks the covariate-varying interactions (paper Fig. 2).

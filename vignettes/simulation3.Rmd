@@ -1,0 +1,77 @@
+---
+title: "Simulation 3: arbitrary covariance and choosing K"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Simulation 3: arbitrary covariance and choosing K}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 6, fig.height = 4)
+```
+
+Simulation 3 (paper §4.3) stress-tests the model when the **true covariance is
+arbitrary** (not low-rank) and varies with a binary covariate. It also
+illustrates choosing the working dimension `K` and checking robustness to it.
+The paper uses $S = 25$, $N = 50$, $J = 100$ and $K = 25$; a smaller design is
+used here.
+
+```{r data}
+library(BCAIA)
+set.seed(2)
+s <- 15; n <- 2 * s; J <- 40
+subject <- rep(seq_len(s), 2)
+xd <- rep(c(0, 1), each = s)
+Xcov  <- cbind(1, xd)     # intercept + binary covariate
+Xmean <- cbind(xd)
+
+## two arbitrary sparse covariance matrices, one per level of xd
+rand_cov <- function(J, sparsity = 0.85) {
+  A <- matrix(rnorm(J * J), J, J); A[abs(A) < sparsity * 2] <- 0
+  S <- tcrossprod(A) / J + diag(1, J); S
+}
+Sig0 <- rand_cov(J); Sig1 <- rand_cov(J)
+alpha_s <- matrix(rnorm(s * J, 3, 1), s, J)
+Y <- matrix(0, n, J)
+for (i in seq_len(n)) {
+  Sig <- if (xd[i] == 0) Sig0 else Sig1
+  L <- chol(Sig + diag(1e-8, J))
+  Y[i, ] <- floor(exp(alpha_s[subject[i], ] + as.numeric(crossprod(L, rnorm(J)))))
+}
+```
+
+## Choosing K from a clr-PCA scree rule
+
+```{r choose-k}
+choose_K(Y, plot = TRUE)
+```
+
+## Fitting
+
+```{r fit, eval = FALSE}
+fit <- bcaia(Y, Xmean, Xcov, subject = subject, K = 25,
+             niter = 160000, burnin = 80000, thin = 10, seed = 1)
+```
+
+```{r fit-short, echo = FALSE}
+fit <- bcaia(Y, Xmean, Xcov, subject = subject, K = 10,
+             niter = 1000, burnin = 500, thin = 5, seed = 1, verbose = FALSE)
+fit
+```
+
+## Group-specific covariance estimates
+
+```{r sigma, fig.width = 7, fig.height = 3.5}
+S0 <- posterior_cor(fit, c(1, 0))
+S1 <- posterior_cor(fit, c(1, 1))
+op <- par(mfrow = c(1, 2), mar = c(2, 2, 2, 1))
+image(S0, main = "rho-hat (xd = 0)", axes = FALSE)
+image(S1, main = "rho-hat (xd = 1)", axes = FALSE)
+par(op)
+```
+
+Even though the model assumes a low-rank covariance regression, with a
+sufficiently large `K` and the full chain it approximates the arbitrary
+group-specific covariance structures well, and the posterior estimates are
+robust to the choice of `K` (paper §4.3 and Supp. Fig. 7).

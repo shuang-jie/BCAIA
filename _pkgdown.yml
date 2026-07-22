@@ -1,0 +1,34 @@
+url: https://shuang-jie.github.io/BCAIA/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [github]
+
+reference:
+- title: Model fitting
+  contents:
+  - bcaia
+  - bcaia_control
+- title: Posterior summaries
+  contents:
+  - posterior_Sigma
+  - posterior_cor
+  - posterior_cor_pair
+  - choose_K
+- title: Data and simulation
+  contents:
+  - simulate_bcaia
+  - mice
+
+articles:
+- title: Reproducing the paper
+  navbar: ~
+  contents:
+  - simulation1
+  - simulation2
+  - simulation3
+  - mice

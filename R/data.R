@@ -1,0 +1,28 @@
+#' Mice gut microbiome data (Patnode et al. 2019)
+#'
+#' A subset of the gnotobiotic mouse gut microbiome experiment of Patnode et
+#' al. (2019), used for the real-data illustration in the paper. Gnotobiotic
+#' mice colonised with a defined 15-member human gut bacterial consortium were
+#' fed a high-saturated-fat/low-fruit-and-vegetable (HiSF) diet supplemented
+#' with different fibres, and the community was profiled at day 12. Two
+#' categorical covariates are recorded: diet (three levels: HiSF control, 10\%
+#' citrus pectin (CPT), 10\% pea fibre (PEF)) and the presence/absence of
+#' \emph{Bacteroides cellulosilyticus} WH2 (OTU 2).
+#'
+#' @format A list with elements:
+#' \describe{
+#'   \item{Y}{A \code{69 x 15} integer matrix of OTU counts (samples in rows).}
+#'   \item{Xmean}{A \code{69 x 5} design matrix for the mean regression.}
+#'   \item{Xcov}{A \code{69 x 4} design matrix for the covariance regression
+#'     (first column is the intercept).}
+#'   \item{species}{A length-15 character vector mapping OTU columns to
+#'     bacterial species.}
+#' }
+#' @source Patnode, M. L. et al. (2019). Interspecies competition impacts
+#'   targeted manipulation of human gut bacteria by fiber-derived
+#'   glycans. \emph{Cell} 179(1), 59-73.
+#' @seealso \code{\link{bcaia}}
+#' @name mice
+#' @docType data
+#' @keywords datasets
+NULL
