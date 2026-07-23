@@ -25,7 +25,6 @@ Imports:
     Rcpp,
     GIGrvg,
     extraDistr,
-    Rfast,
     abind,
     stats
 LinkingTo:

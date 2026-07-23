@@ -39,7 +39,7 @@
   sig2.xi.r <- rep(1, m)
 
   nu.alpha <- hat.alpha
-  u2.alpha <- Rfast::colVars(hat.alphasij)
+  u2.alpha <- .colVars(hat.alphasij)
   a.xi.alpha <- nu.alpha
   Sij1 <- matrix(sample(seq_len(cc$L_alpha), s * J, replace = TRUE), s, J)
   Sij2 <- matrix(1, s, J)

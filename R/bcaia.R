@@ -115,7 +115,7 @@ bcaia <- function(Y, Xmean, Xcov,
   xi <- rep(0, cc$Lr)
 
   nu.alpha <- 0
-  u2.alpha <- mean(Rfast::colVars(hat.alphaij))
+  u2.alpha <- mean(.colVars(hat.alphaij))
   a.xi.alpha <- nu.alpha
   Sj1 <- sample(seq_len(cc$L_alpha), J, replace = TRUE)
   Sj2 <- rep(1, J)

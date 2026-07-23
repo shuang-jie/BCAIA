@@ -56,6 +56,14 @@ bcaia_control <- function(a_phi = 1/20,
   ctrl
 }
 
+## Internal: sample variance of each column (base-R replacement for
+## Rfast::colVars, to avoid a heavy/fragile compiled dependency).
+.colVars <- function(x) {
+  x <- as.matrix(x)
+  n <- nrow(x)
+  (colMeans(x^2) - colMeans(x)^2) * n / (n - 1)
+}
+
 ## Internal: stick-breaking weights from Beta(1, c) draws.
 .recover_psi <- function(x) {
   log_x <- log(x)
