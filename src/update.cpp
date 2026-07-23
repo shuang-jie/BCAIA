@@ -100,7 +100,16 @@ uvec seq_cpp(int locppid, int hicppid) {
 arma::mat mvrnormArma(int n, arma::vec mu, arma::mat sigma) {
   int ncols = sigma.n_cols;
   arma::mat YY = arma::randn(n, ncols);
-  return arma::repmat(mu, 1, n).t() + YY * arma::chol(sigma);
+  // Robust Cholesky: sigma should be positive-definite, but roundoff can make
+  // it marginally non-PD. Try chol() and, only if it fails, add a small
+  // increasing ridge so the sampler cannot crash on such a state.
+  arma::mat R;
+  if (!arma::chol(R, sigma)) {
+    double jit = 1e-8;
+    while (!arma::chol(R, sigma + jit * arma::eye(ncols, ncols)) && jit < 1.0)
+      jit *= 10.0;
+  }
+  return arma::repmat(mu, 1, n).t() + YY * R;
 }
 
 // [[Rcpp::export]]
