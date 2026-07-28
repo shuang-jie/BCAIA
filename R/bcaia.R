@@ -42,6 +42,14 @@
 #' @param control A \code{\link{bcaia_control}} list of hyperparameters and
 #'   tuning constants.
 #' @param verbose Logical; print progress. Default \code{TRUE}.
+#' @param keep_all Logical; if \code{TRUE}, the returned \code{samples} also
+#'   contain the full posterior draws of every model parameter -- the latent
+#'   factors \code{eta}, the Dirichlet-Horseshoe parameters \code{phi} and
+#'   \code{zeta}, and the Dirichlet-process internals (\code{omega}, \code{psi},
+#'   \code{xi}) and membership indicators for the size factor and baseline
+#'   abundance -- in addition to \code{F}, \code{Q}, \code{tau}, \code{beta},
+#'   \code{ri}, \code{alpha}/\code{alphasij} and \code{sig2}. This can be large;
+#'   default \code{FALSE} keeps only the lighter set.
 #'
 #' @return An object of class \code{"bcaia"}: a list with element \code{samples}
 #'   (posterior draws of \code{F}, \code{Q}, \code{tau}, \code{beta}, \code{ri},
@@ -66,7 +74,8 @@ bcaia <- function(Y, Xmean, Xcov,
                   thin = 10,
                   seed = NULL,
                   control = bcaia_control(),
-                  verbose = TRUE) {
+                  verbose = TRUE,
+                  keep_all = FALSE) {
 
   Y <- as.matrix(Y)
   Xmean <- as.matrix(Xmean)
@@ -82,10 +91,11 @@ bcaia <- function(Y, Xmean, Xcov,
   if (is.null(control$b_tau)) control$b_tau <- 1 / J
 
   if (is.null(subject)) {
-    .bcaia_simple(Y, Xmean, Xcov, K, niter, burnin, thin, seed, control, verbose)
+    .bcaia_simple(Y, Xmean, Xcov, K, niter, burnin, thin, seed, control,
+                  verbose, keep_all)
   } else {
     .bcaia_subject(Y, Xmean, Xcov, subject, K, niter, burnin, thin, seed,
-                   control, verbose)
+                   control, verbose, keep_all)
   }
 }
 
@@ -94,7 +104,7 @@ bcaia <- function(Y, Xmean, Xcov,
 ## Simple model (alpha_j): port of the Simulation 1 / mice-data sampler.
 ## ---------------------------------------------------------------------------
 .bcaia_simple <- function(Y, Xmean, Xcov, K, niter, burnin, thin, seed,
-                          control, verbose) {
+                          control, verbose, keep_all = FALSE) {
   n <- nrow(Y); J <- ncol(Y)
   Pmean <- ncol(Xmean); Pcov <- ncol(Xcov)
   cc <- control
@@ -168,6 +178,20 @@ bcaia <- function(Y, Xmean, Xcov,
   beta.st <- array(NA_real_, dim = c(J, Pmean, nsamp))
   ri.st <- matrix(0, nsamp, n); alphaj.st <- matrix(0, nsamp, J)
   sig2.st <- numeric(nsamp)
+
+  if (keep_all) {
+    eta.st     <- array(NA_real_, dim = c(n, K, nsamp))
+    phi.st     <- array(NA_real_, dim = c(J, K, nsamp))
+    zeta.st    <- array(NA_real_, dim = c(J, K, nsamp))
+    omega_r.st <- matrix(NA_real_, cc$Lr, nsamp)
+    psi_r.st   <- matrix(NA_real_, cc$Lr, nsamp)
+    xi_r.st    <- matrix(NA_real_, cc$Lr, nsamp)
+    omega_a.st <- matrix(NA_real_, cc$L_alpha, nsamp)
+    psi_a.st   <- matrix(NA_real_, cc$L_alpha, nsamp)
+    xi_a.st    <- matrix(NA_real_, cc$L_alpha, nsamp)
+    Si1.st <- Si2.st <- matrix(NA_real_, nsamp, n)
+    Sj1.st <- Sj2.st <- matrix(NA_real_, nsamp, J)
+  }
 
   if (verbose) cat(sprintf("BCAIA (simple model): %d iters, burn-in %d, thin %d\n",
                            niter, burnin, thin))
@@ -260,6 +284,17 @@ bcaia <- function(Y, Xmean, Xcov,
       tau.st[, count.st] <- tau; beta.st[, , count.st] <- betajp
       ri.st[count.st, ] <- ri; alphaj.st[count.st, ] <- alphaj
       sig2.st[count.st] <- sig2
+      if (keep_all) {
+        eta.st[, , count.st] <- eta
+        phi.st[, , count.st] <- phi
+        zeta.st[, , count.st] <- zzeta
+        omega_r.st[, count.st] <- w.l.r; psi_r.st[, count.st] <- psi.r
+        xi_r.st[, count.st] <- xi
+        omega_a.st[, count.st] <- w.alpha; psi_a.st[, count.st] <- psi.alpha
+        xi_a.st[, count.st] <- xi.alpha
+        Si1.st[count.st, ] <- Si1; Si2.st[count.st, ] <- Si2
+        Sj1.st[count.st, ] <- Sj1; Sj2.st[count.st, ] <- Sj2
+      }
     }
     if (verbose && ni %% 1000 == 0) cat("  iter", ni, "\r")
   }
@@ -267,10 +302,18 @@ bcaia <- function(Y, Xmean, Xcov,
   if (verbose) cat(sprintf("\nDone in %.1f min; saved %d samples.\n",
                            run.time[3] / 60, count.st))
 
+  samp <- list(F = F.st, Q = Q.st, tau = tau.st, beta = beta.st,
+               ri = ri.st, alpha = alphaj.st, sig2 = sig2.st)
+  if (keep_all)
+    samp <- c(samp, list(
+      eta = eta.st, phi = phi.st, zeta = zeta.st,
+      omega_r = omega_r.st, psi_r = psi_r.st, xi_r = xi_r.st,
+      omega_alpha = omega_a.st, psi_alpha = psi_a.st, xi_alpha = xi_a.st,
+      Si1 = Si1.st, Si2 = Si2.st, Sj1 = Sj1.st, Sj2 = Sj2.st))
+
   structure(list(
     model = "simple",
-    samples = list(F = F.st, Q = Q.st, tau = tau.st, beta = beta.st,
-                   ri = ri.st, alpha = alphaj.st, sig2 = sig2.st),
+    samples = samp,
     runtime = run.time,
     data = list(n = n, J = J, Pmean = Pmean, Pcov = Pcov, K = K,
                 Xmean = Xmean, Xcov = Xcov),

@@ -8,7 +8,7 @@
 ## column of Xcov. Called from bcaia() when `subject` is supplied.
 ## ---------------------------------------------------------------------------
 .bcaia_subject <- function(Y, Xmean, Xcov, subject, K, niter, burnin, thin,
-                           seed, control, verbose) {
+                           seed, control, verbose, keep_all = FALSE) {
   n <- nrow(Y); J <- ncol(Y)
   Pmean <- ncol(Xmean); Pcov <- ncol(Xcov)
   cc <- control
@@ -89,6 +89,23 @@
   ri.st <- matrix(0, nsamp, n)
   alphasij.st <- array(NA_real_, dim = c(s, J, nsamp))
   sig2.st <- numeric(nsamp)
+
+  ## optional: store the full posterior draws of every parameter (large)
+  if (keep_all) {
+    eta.st      <- array(NA_real_, dim = c(n, K, nsamp))
+    phi.st      <- array(NA_real_, dim = c(J, K, nsamp))
+    zeta.st     <- array(NA_real_, dim = c(J, K, nsamp))
+    omega_r.st  <- array(NA_real_, dim = c(m, cc$Lr, nsamp))
+    psi_r.st    <- array(NA_real_, dim = c(m, cc$Lr, nsamp))
+    xi_r.st     <- array(NA_real_, dim = c(m, cc$Lr, nsamp))
+    omega_a.st  <- array(NA_real_, dim = c(m, cc$L_alpha, nsamp))
+    psi_a.st    <- array(NA_real_, dim = c(m, cc$L_alpha, nsamp))
+    xi_a.st     <- array(NA_real_, dim = c(J, cc$L_alpha, nsamp))
+    Si1.st      <- array(NA_real_, dim = c(m, n, nsamp))
+    Si2.st      <- array(NA_real_, dim = c(m, n, nsamp))
+    Sij1.st     <- array(NA_real_, dim = c(s, J, nsamp))
+    Sij2.st     <- array(NA_real_, dim = c(s, J, nsamp))
+  }
 
   if (verbose) cat(sprintf("BCAIA (subject model): %d subjects, %d iters, thin %d\n",
                            s, niter, thin))
@@ -188,6 +205,21 @@
       tau.st[, count.st] <- tau; beta.st[, , count.st] <- betajp
       ri.st[count.st, ] <- ri[1, ]; alphasij.st[, , count.st] <- alphasij
       sig2.st[count.st] <- sig2
+      if (keep_all) {
+        eta.st[, , count.st] <- eta
+        phi.st[, , count.st] <- phi
+        zeta.st[, , count.st] <- zzeta
+        omega_r.st[, , count.st] <- w_l_r_m
+        psi_r.st[, , count.st] <- psi_r_m
+        xi_r.st[, , count.st] <- xi
+        omega_a.st[, , count.st] <- w.alpha
+        psi_a.st[, , count.st] <- psi.alpha
+        xi_a.st[, , count.st] <- xi.alpha
+        Si1.st[, , count.st] <- Si1
+        Si2.st[, , count.st] <- Si2
+        Sij1.st[, , count.st] <- Sij1
+        Sij2.st[, , count.st] <- Sij2
+      }
     }
     if (verbose && ni %% 1000 == 0) cat("  iter", ni, "\r")
   }
@@ -195,10 +227,18 @@
   if (verbose) cat(sprintf("\nDone in %.1f min; saved %d samples.\n",
                            run.time[3] / 60, count.st))
 
+  samp <- list(F = F.st, Q = Q.st, tau = tau.st, beta = beta.st,
+               ri = ri.st, alphasij = alphasij.st, sig2 = sig2.st)
+  if (keep_all)
+    samp <- c(samp, list(
+      eta = eta.st, phi = phi.st, zeta = zeta.st,
+      omega_r = omega_r.st, psi_r = psi_r.st, xi_r = xi_r.st,
+      omega_alpha = omega_a.st, psi_alpha = psi_a.st, xi_alpha = xi_a.st,
+      Si1 = Si1.st, Si2 = Si2.st, Sij1 = Sij1.st, Sij2 = Sij2.st))
+
   structure(list(
     model = "subject",
-    samples = list(F = F.st, Q = Q.st, tau = tau.st, beta = beta.st,
-                   ri = ri.st, alphasij = alphasij.st, sig2 = sig2.st),
+    samples = samp,
     runtime = run.time,
     data = list(n = n, J = J, s = s, subject = S, Pmean = Pmean, Pcov = Pcov,
                 K = K, Xmean = Xmean, Xcov = Xcov),

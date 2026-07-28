@@ -15,7 +15,8 @@ bcaia(
   thin = 10,
   seed = NULL,
   control = bcaia_control(),
-  verbose = TRUE
+  verbose = TRUE,
+  keep_all = FALSE
 )
 }
 \arguments{
@@ -51,6 +52,15 @@ factors are shrunk out by the prior. See \code{\link{choose_K}}.}
 tuning constants.}
 
 \item{verbose}{Logical; print progress. Default \code{TRUE}.}
+
+\item{keep_all}{Logical; if \code{TRUE}, the returned \code{samples} also
+contain the full posterior draws of every model parameter -- the latent
+factors \code{eta}, the Dirichlet-Horseshoe parameters \code{phi} and
+\code{zeta}, and the Dirichlet-process internals (\code{omega}, \code{psi},
+\code{xi}) and membership indicators for the size factor and baseline
+abundance -- in addition to \code{F}, \code{Q}, \code{tau}, \code{beta},
+\code{ri}, \code{alpha}/\code{alphasij} and \code{sig2}. This can be large;
+default \code{FALSE} keeps only the lighter set.}
 }
 \value{
 An object of class \code{"bcaia"}: a list with element \code{samples}
