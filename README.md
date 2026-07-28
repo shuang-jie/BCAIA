@@ -1,6 +1,8 @@
 # BCAIA
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/shuang-jie/BCAIA/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/shuang-jie/BCAIA/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/shuang-jie/BCAIA/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/shuang-jie/BCAIA/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
 
 **B**ayesian **C**ovariate-varying **I**nteraction **A**nalysis for multivariate
@@ -99,6 +101,13 @@ over multiple seeds/replicates.
 
 Zhang, S., Patnode, M. L. and Lee, J. *Bayesian Covariate-Varying Interaction
 Analysis for Multivariate Count Data: Application to Microbiome Studies.*
+
+## Contact
+
+Shuangjie Zhang, Department of Statistics and Data Sciences, The University of
+Texas at Austin — <shuangjie.zhang@austin.utexas.edu>. Questions and bug
+reports are welcome via the
+[issue tracker](https://github.com/shuang-jie/BCAIA/issues).
 
 ## License
 
